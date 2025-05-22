@@ -11,6 +11,7 @@ public class MoveToGoalAgent : Agent
     //The transform of the goal to reach 
     [SerializeField] private Transform doorTransform;
     [SerializeField] private Transform buttonTransform;
+     private Transform goalTransform;
     [SerializeField] private BoxCollider doorCollider;
 
 
@@ -32,7 +33,7 @@ public class MoveToGoalAgent : Agent
         float moveY = actions.ContinuousActions[1];
 
         //Pour minimiser la durée..
-        AddReward(-0.01f);
+        AddReward(-0.005f);
 
         //Move!!!
         transform.Translate(new UnityEngine.Vector3(moveX, 0, moveY) * Time.deltaTime * speed);
@@ -47,33 +48,45 @@ public class MoveToGoalAgent : Agent
         //the position of the agent in the local space (x,y,z)
         sensor.AddObservation(transform.localPosition);
         //the position of the goal in the local space (x,y,z)
-        sensor.AddObservation(doorTransform.localPosition);
-
-
-        sensor.AddObservation(buttonTransform.localPosition);
+        sensor.AddObservation(goalTransform.localPosition);
+        
     }
 
     //This is how reward is managed
     private void OnTriggerEnter(Collider other)
     {
 
-        if (other.CompareTag("button"))
+        if (other.CompareTag("goal") && goalTransform.tag == "button")
         {
-            AddReward(1f);
-            ButtonPressed();
+            if (doorCollider.enabled == false)
+            {
+               
+                goalTransform = doorTransform;
+                AddReward(1f);
+                doorCollider.enabled = true;
+            }
+            else
+            {
+              
+                goalTransform = buttonTransform;
+                AddReward(-1f);
+                doorCollider.enabled = false;
 
+            }
         }
+
+
         //On collision with goal... success!!!
-        if (other.CompareTag("goal"))
+        if (other.CompareTag("goal") && buttonTransform.tag == "door")
         {
-            AddReward(1f);
+            AddReward(5f);
             floorRenderer.material = succesMaterial;
             EndEpisode();
         }
         //On collision with wall... defeat!!!
         else if (other.CompareTag("wall"))
         {
-            AddReward(-1f);
+            AddReward(-2f);
             floorRenderer.material = failureMaterial;
             EndEpisode();
         }
@@ -87,7 +100,8 @@ public class MoveToGoalAgent : Agent
         doorCollider.enabled = false;
 
         transform.localPosition = new Vector3(0, 0, 0);
-        //Vector3 move = new Vector3(Random.Range(-3f, 1f), 0, Random.Range(-2f, 2f));
+        goalTransform = buttonTransform;
+               //Vector3 move = new Vector3(Random.Range(-3f, 1f), 0, Random.Range(-2f, 2f));
         //transform.Translate(move);
 
         //buttonTransform.localPosition = new Vector3(0, 0, 0);
@@ -104,25 +118,5 @@ public class MoveToGoalAgent : Agent
         contActions[1] = Input.GetAxisRaw("Vertical");
     }
 
-
-    private void ButtonPressed()
-    {
-        if(doorCollider.enabled == false)
-        {
-            Debug.Log("Message opened door");
-            AddReward(-1f);
-            doorCollider.enabled = true;
-        }
-        else
-        {
-            Debug.Log("Message closed door");
-            AddReward(1f);
-            doorCollider.enabled = false;
-
-        }
-
-       
-
-    }
 
 }
