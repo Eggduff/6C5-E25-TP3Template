@@ -6,6 +6,8 @@ using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
 using UnityEngine;
 
+using Random = UnityEngine.Random;
+
 public class MoveToGoalAgent : Agent
 {
     //The transform of the goal to reach 
@@ -33,7 +35,7 @@ public class MoveToGoalAgent : Agent
         float moveY = actions.ContinuousActions[1];
 
         //Pour minimiser la durée..
-        AddReward(-0.005f);
+        AddReward(-0.01f);
 
         //Move!!!
         transform.Translate(new UnityEngine.Vector3(moveX, 0, moveY) * Time.deltaTime * speed);
@@ -56,35 +58,33 @@ public class MoveToGoalAgent : Agent
     private void OnTriggerEnter(Collider other)
     {
 
-        if (other.CompareTag("goal") && goalTransform.tag == "button")
+        if (other.CompareTag("button"))
         {
-            if (doorCollider.enabled == false)
+            if (!doorCollider.enabled)
             {
-               
                 goalTransform = doorTransform;
-                AddReward(1f);
+                AddReward(2f);
                 doorCollider.enabled = true;
             }
             else
             {
-              
                 goalTransform = buttonTransform;
                 AddReward(-1f);
                 doorCollider.enabled = false;
-
             }
         }
 
 
         //On collision with goal... success!!!
-        if (other.CompareTag("goal") && buttonTransform.tag == "door")
+        if (other.CompareTag("door") && doorCollider.enabled)
         {
             AddReward(5f);
             floorRenderer.material = succesMaterial;
             EndEpisode();
         }
         //On collision with wall... defeat!!!
-        else if (other.CompareTag("wall"))
+       
+        if (other.CompareTag("wall"))
         {
             AddReward(-2f);
             floorRenderer.material = failureMaterial;
@@ -99,14 +99,35 @@ public class MoveToGoalAgent : Agent
     {
         doorCollider.enabled = false;
 
-        transform.localPosition = new Vector3(0, 0, 0);
-        goalTransform = buttonTransform;
-               //Vector3 move = new Vector3(Random.Range(-3f, 1f), 0, Random.Range(-2f, 2f));
-        //transform.Translate(move);
+        // Generate unique random positions within an 8x8 grid (assuming 1 unit per grid cell)
+        Vector3 agentPosition, buttonPosition, doorPosition;
 
-        //buttonTransform.localPosition = new Vector3(0, 0, 0);
-        //move = new Vector3(Random.Range(1f, 3f), 0, Random.Range(-2f, 2f));
-        //doorTransform.Translate(move);
+        // Generate unique positions using a helper function
+        agentPosition = GetRandomPosition();
+        do
+        {
+            buttonPosition = GetRandomPosition();
+        } while (buttonPosition == agentPosition);
+
+        do
+        {
+            doorPosition = GetRandomPosition();
+        } while (doorPosition == agentPosition || doorPosition == buttonPosition);
+
+        // Apply positions
+        transform.localPosition = agentPosition;
+        buttonTransform.localPosition = buttonPosition;
+        doorTransform.localPosition = doorPosition;
+
+        // Set initial goal
+        goalTransform = buttonTransform;
+    }
+
+    private Vector3 GetRandomPosition()
+    {
+        int x = Random.Range(-4,4);
+        int z = Random.Range(-4,4);
+        return new Vector3(x, 0, z);
     }
 
     //This is how to move the agent when keyboard driven...
